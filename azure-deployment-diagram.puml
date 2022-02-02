@@ -1,0 +1,83 @@
+' Documentation: https://github.com/plantuml-stdlib/C4-PlantUML/blob/master/README.md
+
+@startuml C4_Elements
+title "Azure Diagram"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Colors for Client
+AddElementTag("clientFontColor", $fontColor="#FFFF00")
+AddElementTag("clientBorderColor", $borderColor="#FFFF00")
+
+System(systemAlias, "CATS", "UI Made in Angular")
+System(loadBalancer, "Load Balancer", "Technology", "")
+Rel(systemAlias, loadBalancer, " ", "")
+
+' CATS
+System_Boundary(cats, "CATS Component") {
+    Container(catsAPI, "CATS API", "technology", "")
+    Container(catsOnPrem, "CATS ON-PREM", "technology", "")
+    Container(catsCron, "CATS CRON", "technology", "")
+    Container(catsALEF, "Azure Legal Eligibility Function", "technology", "")
+    
+    Rel(loadBalancer, catsAPI, " ", "")
+    Rel(loadBalancer, catsOnPrem, " ", "")
+    Rel(loadBalancer, catsCron, " ", "")
+    Rel(loadBalancer, catsALEF, " ", "")
+}
+
+ContainerDb(catsDB, "CATS DB Database", "MS SQL")
+Rel(catsAPI, catsDB, " ", "")
+
+' Replica CATS
+System_Boundary(cats_replica, "Replica of CATS Component") {
+    Container(replica_catsAPI, "CATS API", "technology", "")
+    Container(replica_catsOnPrem, "CATS ON-PREM", "technology", "")
+    Container(replica_catsCron, "CATS CRON", "technology", "")
+    Container(replica_catsALEF, "Azure Legal Eligibility Function", "technology", "")
+
+    Rel(catsAPI, replica_catsAPI, " ", "")
+    Rel(catsOnPrem, replica_catsOnPrem, " ", "")
+    Rel(catsCron, replica_catsCron, " ", "")
+    Rel(catsALEF, replica_catsALEF, " ", "")
+
+}
+
+' Realtime reads using SSIS, ABS and Kiteworks
+ContainerDb(replica_catsDB, "Replica of CATS DB Database", "MS SQL")
+Rel(replica_catsAPI, replica_catsDB, " ", "")
+
+Container(our_ABS, "Our ABS", "Azure Blob Service", "To store Documents")
+
+Container(client_ABS, "Client ABS", "technology", "", $tags="clientFontColor+clientBorderColor")
+ContainerDb(client_DB, "Clients Database", "MS SQL", $tags="clientFontColor+clientBorderColor")
+
+Container(SSIS, "SSIS", "Pandas", "ETL")
+
+Rel(client_ABS, client_DB, " ", "")
+Rel(client_DB, SSIS, " ", "")
+
+Rel(SSIS, catsDB, "send data", "")
+
+Rel(client_ABS, catsAPI, "Real Time Read", "")
+Rel(catsAPI, client_ABS, "Real Time Write", "")
+
+Container(kiteworks, "KiteWorks", "", "", $tags="clientFontColor+clientBorderColor")
+
+Rel(catsDB, kiteworks, " ", "")
+Rel(catsOnPrem, our_ABS, " ", "")
+Rel(our_ABS, kiteworks, " ", "")
+
+' Logic App and Share Point
+Container(docxLogicApp, "Logic App that creates Word File", "", "")
+Container(toPdfLogicApp, "Logic App that converts to PDF", "", "")
+Container(sharePoint, "sharePoint", " ", "User can view and download here")
+
+Rel(docxLogicApp, sharePoint, " ", "")
+Rel(toPdfLogicApp, sharePoint, " ", "")
+
+' Cats API connection with Logic Apps
+Rel(catsAPI, docxLogicApp, " ", "")
+Rel(catsAPI, toPdfLogicApp, " ", "")
+
+@enduml
